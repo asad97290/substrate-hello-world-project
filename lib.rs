@@ -12,11 +12,9 @@ mod flipper {
     #[ink(storage)]
     #[derive(SpreadAllocate)]
     pub struct Flipper {
-        /// Stores a single `bool` value on the storage.
         value: bool,
         caller: AccountId,
         caller_to_number: ink_storage::Mapping<AccountId, u32>,
-
     }
 
     impl Flipper {
@@ -35,10 +33,10 @@ mod flipper {
         }
 
         /// Constructor that initializes the `bool` value to `false`.
-        ///
-        /// Constructors can delegate to other constructors.
         #[ink(constructor)]
         pub fn default() -> Self {
+            // This call is required in order to correctly initialize the
+            // `Mapping`s of our contract.
             ink_lang::utils::initialize_contract(|_| {})
         }
 
@@ -62,13 +60,13 @@ mod flipper {
         pub fn get(&self) -> bool {
             self.value
         }
-        /// Simply returns the current value of our `AccountId`.
+        /// Simply returns the current value stored in caller
         #[ink(message)]
         pub fn get_caller(&self) -> AccountId {
             self.caller
         }
 
-        /// Simply returns the current value of our `u32`.
+        /// Simple function to access mapping
         #[ink(message)]
         pub fn get_caller_value(&self,caller_id:AccountId) -> u32 {
             self.caller_to_number.get(caller_id).unwrap_or_default()
@@ -99,6 +97,11 @@ mod flipper {
             let mut flipper = Flipper::new(false);
             assert_eq!(flipper.get(), false);
             flipper.flip();
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            let count = flipper.get_caller_value(accounts.alice);
+            let caller = flipper.get_caller();
+            assert_eq!(count, 2);
+            assert_eq!(caller, accounts.alice);
             assert_eq!(flipper.get(), true);
         }
     }
