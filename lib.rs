@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use ink_lang as ink;
 
 #[ink::contract]
@@ -44,7 +42,7 @@ mod flipper {
         /// This one flips the value of the stored `bool` from `true`
         /// to `false` and vice versa.
         #[ink(message)]
-        pub fn flip(&mut self) {
+        pub fn flip(&mut self) -> Result<(),()>{
             
             let caller:AccountId = Self::env().caller();
             let num:u32 = self.caller_to_number.get(caller).unwrap_or_default();
@@ -52,7 +50,8 @@ mod flipper {
             self.caller = caller;
             self.value = !self.value;
             self.caller_to_number.insert(caller, &(&num+1));
-
+            
+            Ok(())
         }
 
         /// Simply returns the current value of our `bool`.
@@ -96,13 +95,24 @@ mod flipper {
         fn it_works() {
             let mut flipper = Flipper::new(false);
             assert_eq!(flipper.get(), false);
-            flipper.flip();
+            let res = flipper.flip();
+            assert_eq!(res, Result::Ok(()));
+            assert_eq!(flipper.get(), true);
+        }
+
+        #[ink::test]
+        fn mapping_works() {
+            let mut flipper = Flipper::new(false);
+            assert_eq!(flipper.get(), false);
+            let res = flipper.flip();
+            assert_eq!(res, Result::Ok(()));
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
             let count = flipper.get_caller_value(accounts.alice);
             let caller = flipper.get_caller();
             assert_eq!(count, 2);
             assert_eq!(caller, accounts.alice);
             assert_eq!(flipper.get(), true);
+
         }
     }
 }
