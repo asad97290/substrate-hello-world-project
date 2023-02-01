@@ -1,7 +1,22 @@
 use ink_lang as ink;
+use ink_env::AccountId;
+
+#[ink::trait_definition]
+pub trait IFlipper {
+    #[ink(message)]
+    fn flip(&mut self) -> Result<(),()>;
+    #[ink(message)]
+    fn get(&self) -> bool;
+    #[ink(message)]
+    fn get_caller(&self) -> AccountId;
+    #[ink(message)]
+    fn get_caller_value(&self,caller_id:AccountId) -> u32;
+}
+
 
 #[ink::contract]
-mod flipper {
+pub mod flipper {
+    use super::IFlipper;
     use ink_storage::traits::SpreadAllocate;
 
     /// Defines the storage of your contract.
@@ -15,7 +30,8 @@ mod flipper {
         caller_to_number: ink_storage::Mapping<AccountId, u32>,
     }
 
-    impl Flipper {
+
+    impl Flipper{
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
         pub fn new(init_value: bool) -> Self {
@@ -37,12 +53,15 @@ mod flipper {
             // `Mapping`s of our contract.
             ink_lang::utils::initialize_contract(|_| {})
         }
+    }
+
+    impl IFlipper for Flipper {
 
         /// A message that can be called on instantiated contracts.
         /// This one flips the value of the stored `bool` from `true`
         /// to `false` and vice versa.
         #[ink(message)]
-        pub fn flip(&mut self) -> Result<(),()>{
+        fn flip(&mut self) -> Result<(),()>{
             
             let caller:AccountId = Self::env().caller();
             let num:u32 = self.caller_to_number.get(caller).unwrap_or_default();
@@ -56,18 +75,18 @@ mod flipper {
 
         /// Simply returns the current value of our `bool`.
         #[ink(message)]
-        pub fn get(&self) -> bool {
+        fn get(&self) -> bool {
             self.value
         }
         /// Simply returns the current value stored in caller
         #[ink(message)]
-        pub fn get_caller(&self) -> AccountId {
+        fn get_caller(&self) -> AccountId {
             self.caller
         }
 
         /// Simple function to access mapping
         #[ink(message)]
-        pub fn get_caller_value(&self,caller_id:AccountId) -> u32 {
+        fn get_caller_value(&self,caller_id:AccountId) -> u32 {
             self.caller_to_number.get(caller_id).unwrap_or_default()
         }
     }
