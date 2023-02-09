@@ -30,6 +30,18 @@ pub mod flipper {
         caller: AccountId,
         caller_to_number: ink_storage::Mapping<AccountId, u32>,
     }
+    
+    /// Event emitted when an approval occurs that `spender` is allowed to withdraw
+    /// up to the amount of `value` tokens from `owner`.
+    #[ink(event)]
+    pub struct Flipped {
+        #[ink(topic)]
+        caller: AccountId,
+        #[ink(topic)]
+        value:bool,
+        #[ink(topic)]
+        no_of_times:u32
+    }
 
     /// Flipper Struct Implementation
     impl Flipper{
@@ -44,6 +56,12 @@ pub mod flipper {
                 contract.value = init_value;
                 contract.caller = caller;
                 contract.caller_to_number.insert(&caller, &(&num+1));
+                // emit event
+                Self::env().emit_event(Flipped {
+                    caller: caller,
+                    value: init_value,
+                    no_of_times:num
+                });
             })
         }
 
@@ -71,7 +89,12 @@ pub mod flipper {
             self.caller = caller;
             self.value = !self.value;
             self.caller_to_number.insert(caller, &(&num+1));
-            
+            // emit event
+            Self::env().emit_event(Flipped {
+                caller: caller,
+                value: self.value,
+                no_of_times:num
+            });
             Ok(())
         }
 
@@ -104,14 +127,12 @@ pub mod flipper {
         /// Imports `ink_lang` so we can use `#[ink::test]`.
         use ink_lang as ink;
 
-        /// We test if the default constructor does its job.
         #[ink::test]
         fn default_works() {
             let flipper = Flipper::default();
             assert_eq!(flipper.get(), false);
         }
 
-        /// We test a simple use case of our contract.
         #[ink::test]
         fn it_works() {
             let mut flipper = Flipper::new(false);
@@ -125,8 +146,10 @@ pub mod flipper {
         fn mapping_works() {
             let mut flipper = Flipper::new(false);
             assert_eq!(flipper.get(), false);
+           
             let res = flipper.flip();
             assert_eq!(res, Result::Ok(()));
+           
             let accounts = get_accounts();
             let count = flipper.get_caller_value(accounts.alice);
             let caller = flipper.get_caller();
@@ -159,7 +182,7 @@ pub mod flipper {
             ink_env::test::set_caller::<ink_env::DefaultEnvironment>(sender);
         }
 
-        fn get_accounts() ->ink_env::test::DefaultAccounts<Environment>{
+        fn get_accounts() -> ink_env::test::DefaultAccounts<Environment>{
             let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
             return accounts;
         }

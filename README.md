@@ -1,9 +1,18 @@
+## bootstrap hello world project
+```bash
+cargo contract new flipper
+```
+
 ## Test Contract
 ```bash
 cargo test  
 ```
 
 ## Build contract
+```bash
+cargo build 
+```
+and
 ```bash
 cargo +nightly contract build 
 ```
