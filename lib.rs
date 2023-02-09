@@ -1,3 +1,4 @@
+
 use ink_lang as ink;
 use ink_env::AccountId;
 
@@ -44,6 +45,7 @@ pub mod flipper {
     }
 
     /// Flipper Struct Implementation
+
     impl Flipper{
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
@@ -84,11 +86,11 @@ pub mod flipper {
         fn flip(&mut self) -> Result<(),()>{
             
             let caller:AccountId = Self::env().caller();
-            let num:u32 = self.caller_to_number.get(caller).unwrap_or_default();
-
+            let mut num:u32 = self.caller_to_number.get(caller).unwrap_or_default();
             self.caller = caller;
             self.value = !self.value;
-            self.caller_to_number.insert(caller, &(&num+1));
+            num = num +1;
+            self.caller_to_number.insert(caller, &num);
             // emit event
             Self::env().emit_event(Flipped {
                 caller: caller,
@@ -131,14 +133,19 @@ pub mod flipper {
         fn default_works() {
             let flipper = Flipper::default();
             assert_eq!(flipper.get(), false);
+            assert_eq!(ink_env::test::recorded_events().count(), 0);
+
         }
 
         #[ink::test]
         fn it_works() {
             let mut flipper = Flipper::new(false);
             assert_eq!(flipper.get(), false);
+            assert_eq!(ink_env::test::recorded_events().count(), 1);
+
             let res = flipper.flip();
             assert_eq!(res, Result::Ok(()));
+            assert_eq!(ink_env::test::recorded_events().count(), 2);
             assert_eq!(flipper.get(), true);
         }
 
@@ -146,10 +153,12 @@ pub mod flipper {
         fn mapping_works() {
             let mut flipper = Flipper::new(false);
             assert_eq!(flipper.get(), false);
-           
+            assert_eq!(ink_env::test::recorded_events().count(), 1);
+
             let res = flipper.flip();
             assert_eq!(res, Result::Ok(()));
-           
+            assert_eq!(ink_env::test::recorded_events().count(), 2);
+          
             let accounts = get_accounts();
             let count = flipper.get_caller_value(accounts.alice);
             let caller = flipper.get_caller();
@@ -166,9 +175,27 @@ pub mod flipper {
 
             let mut flipper = Flipper::new(false);
             assert_eq!(flipper.get(), false);
+            assert_eq!(ink_env::test::recorded_events().count(), 1);
 
             let res = flipper.flip();
             assert_eq!(res, Result::Ok(()));
+            assert_eq!(ink_env::test::recorded_events().count(), 2);
+
+            // Transfer event triggered during initial construction.
+            let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
+            assert_eq!(2, emitted_events.len());
+            
+            //define type
+            type Event = <Flipper as ink::reflect::ContractEventBase>::Type;
+            //use type
+            let decoded_event = <Event as scale::Decode>::decode(&mut &emitted_events[1].data[..])
+            .expect("encountered invalid contract event data buffer");
+
+            let Event::Flipped(Flipped { caller, value,no_of_times }) = decoded_event;
+            assert_eq!(caller, accounts.eve, "encountered invalid Transfer.from");
+            assert_eq!(value, true, "encountered invalid Trasfer.value");
+            assert_eq!(no_of_times, 2, "encountered invalid Transfer.to");
+        
             
             let count = flipper.get_caller_value(accounts.eve);
             let caller = flipper.get_caller();
