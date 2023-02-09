@@ -1,6 +1,7 @@
 use ink_lang as ink;
 use ink_env::AccountId;
 
+/// Interface
 #[ink::trait_definition]
 pub trait IFlipper {
     #[ink(message)]
@@ -13,7 +14,7 @@ pub trait IFlipper {
     fn get_caller_value(&self,caller_id:AccountId) -> u32;
 }
 
-
+/// Module Flipper
 #[ink::contract]
 pub mod flipper {
     use super::IFlipper;
@@ -30,7 +31,7 @@ pub mod flipper {
         caller_to_number: ink_storage::Mapping<AccountId, u32>,
     }
 
-
+    /// Flipper Struct Implementation
     impl Flipper{
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
@@ -46,7 +47,7 @@ pub mod flipper {
             })
         }
 
-        /// Constructor that initializes the `bool` value to `false`.
+        /// Default Constructor that initializes the `bool` value to `false`.
         #[ink(constructor)]
         pub fn default() -> Self {
             // This call is required in order to correctly initialize the
@@ -55,6 +56,7 @@ pub mod flipper {
         }
     }
 
+    /// IFlipper trait Implementation
     impl IFlipper for Flipper {
 
         /// A message that can be called on instantiated contracts.
@@ -125,13 +127,41 @@ pub mod flipper {
             assert_eq!(flipper.get(), false);
             let res = flipper.flip();
             assert_eq!(res, Result::Ok(()));
-            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            let accounts = get_accounts();
             let count = flipper.get_caller_value(accounts.alice);
             let caller = flipper.get_caller();
             assert_eq!(count, 2);
             assert_eq!(caller, accounts.alice);
             assert_eq!(flipper.get(), true);
 
+        }
+
+        #[ink::test]
+        fn change_account_works() {
+            let accounts = get_accounts();
+            set_caller(accounts.eve);
+
+            let mut flipper = Flipper::new(false);
+            assert_eq!(flipper.get(), false);
+
+            let res = flipper.flip();
+            assert_eq!(res, Result::Ok(()));
+            
+            let count = flipper.get_caller_value(accounts.eve);
+            let caller = flipper.get_caller();
+            assert_eq!(count, 2);
+            assert_eq!(caller, accounts.eve);
+            assert_eq!(flipper.get(), true);
+
+        }
+        // utility functions
+        fn set_caller(sender: AccountId) {
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(sender);
+        }
+
+        fn get_accounts() ->ink_env::test::DefaultAccounts<Environment>{
+            let accounts = ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            return accounts;
         }
     }
 }
